@@ -237,19 +237,6 @@ class TestProductRoutes(TestCase):
         for product in data:
             self.assertEqual(product["available"], True)
 
-    def test_query_by_category_uppercase(self):
-        """It should Query Products by category with uppercase"""
-        products = self._create_products(10)
-        category = products[0].category.name.upper()
-        found = [p for p in products if p.category.name == category.lower()]
-        found_count = len(found)
-        response = self.client.get(BASE_URL, query_string=f"category={category}")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.get_json()
-        self.assertEqual(len(data), found_count)
-        for product in data:
-            self.assertEqual(product["category"], category.lower())
-
     ######################################################################
     # Utility functions
     ######################################################################
