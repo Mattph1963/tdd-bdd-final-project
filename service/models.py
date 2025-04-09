@@ -77,8 +77,9 @@ class Product(db.Model):
     price = db.Column(db.Numeric, nullable=False)
     available = db.Column(db.Boolean(), nullable=False, default=True)
     category = db.Column(
-        db.Enum(Category), nullable=False, server_default=(Category.UNKNOWN.name)
-    )
+        db.Enum(Category),
+        nullable=False,
+        server_default=(Category.UNKNOWN.name))
 
     ##################################################
     # INSTANCE METHODS
@@ -133,20 +134,18 @@ class Product(db.Model):
             self.price = Decimal(data["price"])
             if isinstance(data["available"], bool):
                 self.available = data["available"]
-            # else:
-            #     raise DataValidationError(
-            #         "Invalid type for boolean [available]: "
-            #         + str(type(data["available"]))
-            #     )
-            self.category = getattr(Category, data["category"])  # create enum from string
-            # except AttributeError as error:
-            # raise DataValidationError("Invalid attribute: " + error.args[0]) from error
+            self.category = getattr(
+                Category, data["category"])  # create enum from string
         except KeyError as error:
-            raise DataValidationError("Invalid product: missing " + error.args[0]) from error
-            #  except TypeError as error:
-            #  raise DataValidationError(
-            #     "Invalid product: body of request contained bad or no data " + str(error)
-            #  ) from error
+            raise DataValidationError(
+                "Invalid product: missing " +
+                error.args[0]) from error
+        except AttributeError as error:
+            raise DataValidationError(
+                "Invalid product: invalid category " + error.args[0]) from error
+        except TypeError as error:
+            raise DataValidationError(
+                "Invalid product: body of request contained bad or no data " + str(error)) from error
         return self
 
     ##################################################
@@ -210,13 +209,9 @@ class Product(db.Model):
 
         :return: a collection of Products with that price
         :rtype: list
-
         """
-        # logger.info("Processing price query for %s ...", price)
-        # price_value = price
-        # if isinstance(price, str):
-        #     price_value = Decimal(price.strip(' "'))
-        # return cls.query.filter(cls.price == price_value)
+        logger.info("Processing price query for %s ...", price)
+        return cls.query.filter(cls.price == price)
 
     @classmethod
     def find_by_availability(cls, available: bool = True) -> list:
