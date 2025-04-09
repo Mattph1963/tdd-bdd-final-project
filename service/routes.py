@@ -48,21 +48,9 @@ def index():
 ######################################################################
 def check_content_type(content_type):
     """Checks that the media type is correct"""
-    if "Content-Type" not in request.headers:
-        app.logger.error("No Content-Type specified.")
-        abort(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            f"Content-Type must be {content_type}",
-        )
-    actual_type = request.headers["Content-Type"]
-    if actual_type == content_type:
-        app.logger.info("Content-Type '%s' accepted", content_type)
-        return
-    app.logger.error("Invalid Content-Type: %s", actual_type)
-    abort(
-        status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-        f"Content-Type must be {content_type}, got {actual_type}",
-    )
+    if "Content-Type" not in request.headers or request.headers["Content-Type"] != content_type:
+        app.logger.error("Invalid or missing Content-Type: %s", request.headers.get("Content-Type", "None"))
+        abort(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f"Content-Type must be {content_type}")
 
 
 ######################################################################
@@ -77,10 +65,9 @@ def create_products():
     app.logger.info("Request to Create a Product...")
     check_content_type("application/json")
     data = request.get_json()
-    app.logger.info("Processing: %s", data)
-    if "name" not in data or not data["name"]:
+    if not data or "name" not in data or not data["name"]:
         app.logger.error("Missing or empty product name in request.")
-        abort(status.HTTP_400_BAD_REQUEST, "Product name is required")
+        return jsonify({"error": "Product name is required"}), status.HTTP_400_BAD_REQUEST
     product = Product()
     product.deserialize(data)
     product.create()
@@ -106,16 +93,14 @@ def list_products():
         products = Product.find_by_name(name)
     elif category:
         app.logger.info("Find by category: %s", category)
-        try:
-            category_value = getattr(Category, category.upper())
-            products = Product.find_by_category(category_value)
-        except AttributeError:
+        category_value = getattr(Category, category.upper(), None)
+        if category_value is None:
             app.logger.error("Invalid category: %s", category)
             abort(status.HTTP_400_BAD_REQUEST, f"Invalid category: {category}")
+        products = Product.find_by_category(category_value)
     elif available:
         app.logger.info("Find by available: %s", available)
-        available_value = available.lower() in ["true", "yes", "1"]
-        products = Product.find_by_availability(available_value)
+        products = Product.find_by_availability(available.lower() in ["true", "yes", "1"])
     else:
         app.logger.info("Find all")
         products = Product.all()

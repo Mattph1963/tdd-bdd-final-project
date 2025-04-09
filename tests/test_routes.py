@@ -22,16 +22,17 @@ Test cases can be run with the following:
   codecov --token=$CODECOV_TOKEN
 
   While debugging just these tests it's convenient to use this:
-    nosetests --stop tests/test_service.py:TestProductService
+    nosetests --stop tests/test_routes.py:TestProductRoutes
 """
 import os
 import logging
 from decimal import Decimal
 from unittest import TestCase
+from unittest.mock import patch
 from urllib.parse import quote_plus
 from service import app
 from service.common import status
-from service.models import db, Product
+from service.models import db, Product, init_db
 from tests.factories import ProductFactory
 
 # Disable all but critical errors during normal test run
@@ -264,6 +265,33 @@ class TestProductRoutes(TestCase):
         for product in data:
             self.assertEqual(product["category"], category)
 
+    def test_database_init_failure(self):
+        """It should handle database initialization failure"""
+        with patch('flask_sqlalchemy.SQLAlchemy.init_app') as mock_init:
+            mock_init.side_effect = Exception("Database connection failed")
+            with self.assertRaises(SystemExit) as cm:
+                init_db(app)
+            self.assertEqual(cm.exception.code, 4)
+
+    def test_bad_request_direct(self):
+        """It should handle a direct 400 bad request"""
+        from service.common.error_handlers import bad_request
+        resp = bad_request("Invalid input")
+        self.assertEqual(resp[1], status.HTTP_400_BAD_REQUEST)
+        data = resp[0].get_json()
+        self.assertEqual(data["status"], 400)
+        self.assertEqual(data["error"], "Bad Request")
+        self.assertEqual(data["message"], "Invalid input")
+
+    def test_method_not_allowed(self):
+        """It should return 405 for unsupported method"""
+        test_product = self._create_products(1)[0]
+        response = self.client.patch(f"{BASE_URL}/{test_product.id}")
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        data = response.get_json()
+        self.assertEqual(data["status"], 405)
+        self.assertEqual(data["error"], "Method not Allowed")
+
     ######################################################################
     # Utility functions
     ######################################################################
@@ -275,3 +303,8 @@ class TestProductRoutes(TestCase):
         data = response.get_json()
         # logging.debug("data = %s", data)
         return len(data)
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()

@@ -1,3 +1,4 @@
+######################################################################
 # Copyright 2016, 2022 John J. Rofrano. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+######################################################################
+
 """
 Module: error_handlers
 """
@@ -34,6 +37,14 @@ def bad_request(error):
     """Handles bad requests with 400_BAD_REQUEST"""
     message = str(error)
     app.logger.warning(message)
+    return (
+        jsonify(
+            status=status.HTTP_400_BAD_REQUEST,
+            error="Bad Request",
+            message=message
+        ),
+        status.HTTP_400_BAD_REQUEST,
+    )
 
 
 @app.errorhandler(status.HTTP_404_NOT_FOUND)
@@ -45,7 +56,8 @@ def not_found(error):
         jsonify(
             status=status.HTTP_404_NOT_FOUND,
             error="Not Found",
-            message=message),
+            message=message
+        ),
         status.HTTP_404_NOT_FOUND,
     )
 

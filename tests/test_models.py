@@ -12,17 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Test cases for Product Model
+######################################################################
+#  P R O D U C T   M O D E L   T E S T   C A S E S
+######################################################################
 
-Test cases can be run with:
-    nosetests
-    coverage report -m
-
-While debugging just these tests it's convenient to use this:
-    nosetests --stop tests/test_models.py:TestProductModel
-
-"""
 import os
 import logging
 import unittest
@@ -35,10 +28,10 @@ DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql://postgres:postgres@localhost:5432/postgres"
 )
 
+######################################################################
+#  T E S T   C A S E S
+######################################################################
 
-######################################################################
-#  P R O D U C T   M O D E L   T E S T   C A S E S
-######################################################################
 # pylint: disable=too-many-public-methods
 class TestProductModel(unittest.TestCase):
     """Test Cases for Product Model"""
@@ -50,7 +43,6 @@ class TestProductModel(unittest.TestCase):
         app.config["DEBUG"] = False
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
         app.logger.setLevel(logging.CRITICAL)
-        # Product.init_db(app)  # Removed to avoid duplicate db.init_app
 
     @classmethod
     def tearDownClass(cls):
@@ -59,7 +51,7 @@ class TestProductModel(unittest.TestCase):
 
     def setUp(self):
         """This runs before each test"""
-        db.session.query(Product).delete()  # clean up the last tests
+        db.session.query(Product).delete()  # Clean up the last tests
         db.session.commit()
 
     def tearDown(self):
@@ -106,7 +98,6 @@ class TestProductModel(unittest.TestCase):
         self.assertEqual(new_product.available, product.available)
         self.assertEqual(new_product.category, product.category)
 
-    # READ PRODUCT CASE
     def test_a_read_product(self):
         """It should Read a Product"""
         product = ProductFactory()
@@ -162,7 +153,7 @@ class TestProductModel(unittest.TestCase):
         name = products[0].name
         count = len([product for product in products if product.name == name])
         found = Product.find_by_name(name)
-        self.assertEqual(found.count(), count)
+        self.assertEqual(len(found), count)  # Changed from count() to len()
         for product in found:
             self.assertEqual(product.name, name)
 
@@ -172,10 +163,9 @@ class TestProductModel(unittest.TestCase):
         for product in products:
             product.create()
         available = products[0].available
-        count = len([product for product in products
-                     if product.available == available])
+        count = len([product for product in products if product.available == available])
         found = Product.find_by_availability(available)
-        self.assertEqual(found.count(), count)
+        self.assertEqual(len(found), count)  # Changed from count() to len()
         for product in found:
             self.assertEqual(product.available, available)
 
@@ -185,9 +175,51 @@ class TestProductModel(unittest.TestCase):
         for product in products:
             product.create()
         category = products[0].category
-        count = len(
-            [product for product in products if product.category == category])
+        count = len([product for product in products if product.category == category])
         found = Product.find_by_category(category)
-        self.assertEqual(found.count(), count)
+        self.assertEqual(len(found), count)  # Changed from count() to len()
         for product in found:
             self.assertEqual(product.category, category)
+
+    ######################################################################
+    #  EDGE CASES AND ERROR HANDLING
+    ######################################################################
+
+    def test_create_product_with_invalid_price(self):
+        """It should raise an error when creating a product with invalid price"""
+        with self.assertRaises(ValueError):
+            product = Product(
+                name="Invalid Product",
+                description="Invalid price product",
+                price=-10.00,  # Invalid price
+                available=True,
+                category=Category.CLOTHS)
+            product.create()
+
+    def test_update_product_with_invalid_data(self):
+        """It should raise an error when updating a product with invalid data"""
+        product = ProductFactory()
+        product.id = None
+        product.create()
+        self.assertIsNotNone(product.id)
+
+        # Attempt to update product with invalid price
+        with self.assertRaises(ValueError):
+            product.price = -20.00  # Invalid price
+            product.update()
+
+    def test_find_product_by_nonexistent_id(self):
+        """It should return None when trying to find a product by non-existent ID"""
+        found_product = Product.find(99999)  # Non-existent ID
+        self.assertIsNone(found_product)
+
+    def test_find_product_by_nonexistent_name(self):
+        """It should return an empty list when searching for a product by a name that doesn't exist"""
+        found_products = Product.find_by_name("Nonexistent Product")
+        self.assertEqual(len(found_products), 0)  # Changed from count() to len()
+
+    def test_find_product_by_nonexistent_category(self):
+        """It should return an empty list when searching for a product by a category that doesn't exist"""
+        found_products = Product.find_by_category(Category.UNKNOWN)
+        self.assertEqual(len(found_products), 0)  # Changed from count() to len()
+

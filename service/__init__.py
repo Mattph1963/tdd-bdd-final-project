@@ -26,11 +26,7 @@ from flask import Flask
 from service import config
 from service.common import log_handlers
 
-# NOTE: Do not change the order of this code
-# The Flask app must be created
-# BEFORE you import modules that depend on it !!!
-
-# Create the Flask aoo
+# Create the Flask app
 app = Flask(__name__)  # pylint: disable=invalid-name
 
 # Load Configurations
@@ -45,14 +41,15 @@ from service.common import error_handlers, cli_commands  # noqa: F401, E402
 log_handlers.init_logging(app, "gunicorn.error")
 
 app.logger.info(70 * "*")
-app.logger.info("  P E T   S E R V I C E   R U N N I N G  ".center(70, "*"))
+app.logger.info("  P R O D U C T   S E R V I C E   R U N N I N G  ".center(70, "*"))
 app.logger.info(70 * "*")
 
+# Initialize the database
 try:
     models.init_db(app)  # make our sqlalchemy tables
+    app.logger.info("Database initialized successfully")
 except Exception as error:  # pylint: disable=broad-except
     app.logger.critical("%s: Cannot continue", error)
-    # gunicorn requires exit code 4 to stop spawning workers when they die
     sys.exit(4)
 
 app.logger.info("Service initialized!")

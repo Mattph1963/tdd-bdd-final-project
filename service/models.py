@@ -1,13 +1,13 @@
 # Copyright 2016, 2023 John Rofrano. All Rights Reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the 'License');
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 # https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an 'AS IS' BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -77,9 +77,8 @@ class Product(db.Model):
     price = db.Column(db.Numeric, nullable=False)
     available = db.Column(db.Boolean(), nullable=False, default=True)
     category = db.Column(
-        db.Enum(Category),
-        nullable=False,
-        server_default=(Category.UNKNOWN.name))
+        db.Enum(Category), nullable=False, server_default=(Category.UNKNOWN.name)
+    )
 
     ##################################################
     # INSTANCE METHODS
@@ -93,7 +92,8 @@ class Product(db.Model):
         Creates a Product to the database
         """
         logger.info("Creating %s", self.name)
-        # id must be none to generate next primary key
+        if self.price < 0:  # Validate price before commit
+            raise ValueError("Price cannot be negative")
         self.id = None  # pylint: disable=invalid-name
         db.session.add(self)
         db.session.commit()
@@ -103,6 +103,8 @@ class Product(db.Model):
         Updates a Product to the database
         """
         logger.info("Saving %s", self.name)
+        if self.price < 0:  # Validate price before commit
+            raise ValueError("Price cannot be negative")
         db.session.commit()
 
     def delete(self):
@@ -131,21 +133,26 @@ class Product(db.Model):
         try:
             self.name = data["name"]
             self.description = data["description"]
-            self.price = Decimal(data["price"])
+            price_value = data["price"]
+            if not isinstance(price_value, (int, float, str)):
+                raise ValueError("Invalid price: must be a number")
+            price_decimal = Decimal(str(price_value))
+            if price_decimal < 0:
+                raise ValueError("Invalid price: must be non-negative")
+            self.price = price_decimal
             if isinstance(data["available"], bool):
                 self.available = data["available"]
-            self.category = getattr(
-                Category, data["category"])  # create enum from string
+            else:
+                raise ValueError(
+                    "Invalid type for boolean [available]: " + str(type(data["available"]))
+                )
+            self.category = getattr(Category, data["category"])  # create enum from string
         except KeyError as error:
-            raise DataValidationError(
-                "Invalid product: missing " +
-                error.args[0]) from error
+            raise ValueError("Invalid product: missing " + error.args[0]) from error
         except AttributeError as error:
-            raise DataValidationError(
-                "Invalid product: invalid category " + error.args[0]) from error
-        except TypeError as error:
-            raise DataValidationError(
-                "Invalid product: body of request contained bad or no data " + str(error)) from error
+            raise ValueError("Invalid attribute: " + error.args[0]) from error
+        except ValueError as error:
+            raise ValueError("Invalid price format: " + str(error)) from error
         return self
 
     ##################################################
@@ -161,7 +168,6 @@ class Product(db.Model):
 
         """
         logger.info("Initializing database")
-        # This is where we initialize SQLAlchemy from the Flask app
         db.init_app(app)
         app.app_context().push()
         db.create_all()  # make our sqlalchemy tables
@@ -198,7 +204,7 @@ class Product(db.Model):
 
         """
         logger.info("Processing name query for %s ...", name)
-        return cls.query.filter(cls.name == name)
+        return cls.query.filter(cls.name == name).all()
 
     @classmethod
     def find_by_price(cls, price: Decimal) -> list:
@@ -209,9 +215,13 @@ class Product(db.Model):
 
         :return: a collection of Products with that price
         :rtype: list
+
         """
-        logger.info("Processing price query for %s ...", price)
-        return cls.query.filter(cls.price == price)
+        # logger.info("Processing price query for %s ...", price)
+        # price_value = price
+        # if isinstance(price, str):
+        #     price_value = Decimal(price.strip(' "'))
+        # return cls.query.filter(cls.price == price_value)
 
     @classmethod
     def find_by_availability(cls, available: bool = True) -> list:
@@ -225,7 +235,7 @@ class Product(db.Model):
 
         """
         logger.info("Processing available query for %s ...", available)
-        return cls.query.filter(cls.available == available)
+        return cls.query.filter(cls.available == available).all()
 
     @classmethod
     def find_by_category(cls, category: Category = Category.UNKNOWN) -> list:
@@ -239,4 +249,4 @@ class Product(db.Model):
 
         """
         logger.info("Processing category query for %s ...", category.name)
-        return cls.query.filter(cls.category == category)
+        return cls.query.filter(cls.category == category).all()
