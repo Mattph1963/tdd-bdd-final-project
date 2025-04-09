@@ -32,6 +32,7 @@ DATABASE_URI = os.getenv(
 #  T E S T   C A S E S
 ######################################################################
 
+
 # pylint: disable=too-many-public-methods
 class TestProductModel(unittest.TestCase):
     """Test Cases for Product Model"""
@@ -222,4 +223,3 @@ class TestProductModel(unittest.TestCase):
         """It should return an empty list when searching for a product by a category that doesn't exist"""
         found_products = Product.find_by_category(Category.UNKNOWN)
         self.assertEqual(len(found_products), 0)  # Changed from count() to len()
-
