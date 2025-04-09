@@ -102,8 +102,6 @@ class Product(db.Model):
         Updates a Product to the database
         """
         logger.info("Saving %s", self.name)
-        if not self.id:
-            raise DataValidationError("Update called with empty ID field")
         db.session.commit()
 
     def delete(self):
@@ -135,20 +133,20 @@ class Product(db.Model):
             self.price = Decimal(data["price"])
             if isinstance(data["available"], bool):
                 self.available = data["available"]
-            else:
-                raise DataValidationError(
-                    "Invalid type for boolean [available]: "
-                    + str(type(data["available"]))
-                )
+            # else:
+            #     raise DataValidationError(
+            #         "Invalid type for boolean [available]: "
+            #         + str(type(data["available"]))
+            #     )
             self.category = getattr(Category, data["category"])  # create enum from string
-        except AttributeError as error:
-            raise DataValidationError("Invalid attribute: " + error.args[0]) from error
+            # except AttributeError as error:
+            # raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:
             raise DataValidationError("Invalid product: missing " + error.args[0]) from error
-        except TypeError as error:
-            raise DataValidationError(
-                "Invalid product: body of request contained bad or no data " + str(error)
-            ) from error
+            #  except TypeError as error:
+            #  raise DataValidationError(
+            #     "Invalid product: body of request contained bad or no data " + str(error)
+            #  ) from error
         return self
 
     ##################################################
@@ -214,11 +212,11 @@ class Product(db.Model):
         :rtype: list
 
         """
-        logger.info("Processing price query for %s ...", price)
-        price_value = price
-        if isinstance(price, str):
-            price_value = Decimal(price.strip(' "'))
-        return cls.query.filter(cls.price == price_value)
+        # logger.info("Processing price query for %s ...", price)
+        # price_value = price
+        # if isinstance(price, str):
+        #     price_value = Decimal(price.strip(' "'))
+        # return cls.query.filter(cls.price == price_value)
 
     @classmethod
     def find_by_availability(cls, available: bool = True) -> list:
